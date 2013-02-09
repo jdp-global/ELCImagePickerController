@@ -23,27 +23,48 @@
 }
 
 -(void)selectedAssets:(NSArray*)_assets {
+    
+    id<UIApplicationDelegate> appDelegate = [[UIApplication sharedApplication] delegate];
+    
+    UIActivityIndicatorView * activityIndicator = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray];
+    activityIndicator.center = CGPointMake(appDelegate.window.frame.size.width/2, appDelegate.window.frame.size.height/2);
+    [activityIndicator setHidden:NO];
+    [activityIndicator setTag:1001];
+    [appDelegate.window addSubview:activityIndicator];
+    [appDelegate.window bringSubviewToFront:activityIndicator];
+    [activityIndicator startAnimating];
+    
+    [self performSelector:@selector(doProcess:) withObject:_assets afterDelay:2.1];
+}
 
-	NSMutableArray *returnArray = [[[NSMutableArray alloc] init] autorelease];
-	
-	for(ALAsset *asset in _assets) {
 
-		NSMutableDictionary *workingDictionary = [[NSMutableDictionary alloc] init];
-		[workingDictionary setObject:[asset valueForProperty:ALAssetPropertyType] forKey:@"UIImagePickerControllerMediaType"];
+- (void) doProcess:(NSArray *)_assets {
+    
+    NSMutableArray *returnArray = [[[NSMutableArray alloc] init] autorelease];
+    
+    for(ALAsset *asset in _assets) {
+        
+        NSMutableDictionary *workingDictionary = [[NSMutableDictionary alloc] init];
+        [workingDictionary setObject:[asset valueForProperty:ALAssetPropertyType] forKey:@"UIImagePickerControllerMediaType"];
         [workingDictionary setObject:[UIImage imageWithCGImage:[[asset defaultRepresentation] fullScreenImage]] forKey:@"UIImagePickerControllerOriginalImage"];
-		[workingDictionary setObject:[[asset valueForProperty:ALAssetPropertyURLs] valueForKey:[[[asset valueForProperty:ALAssetPropertyURLs] allKeys] objectAtIndex:0]] forKey:@"UIImagePickerControllerReferenceURL"];
-		
-		[returnArray addObject:workingDictionary];
-		
-		[workingDictionary release];	
-	}
-	
+        [workingDictionary setObject:[[asset valueForProperty:ALAssetPropertyURLs] valueForKey:[[[asset valueForProperty:ALAssetPropertyURLs] allKeys] objectAtIndex:0]] forKey:@"UIImagePickerControllerReferenceURL"];
+        
+        [returnArray addObject:workingDictionary];
+        
+        [workingDictionary release];
+    }
+    
     [self popToRootViewControllerAnimated:NO];
     [[self parentViewController] dismissModalViewControllerAnimated:YES];
     
-	if([delegate respondsToSelector:@selector(elcImagePickerController:didFinishPickingMediaWithInfo:)]) {
-		[delegate performSelector:@selector(elcImagePickerController:didFinishPickingMediaWithInfo:) withObject:self withObject:[NSArray arrayWithArray:returnArray]];
-	}
+    if([delegate respondsToSelector:@selector(elcImagePickerController:didFinishPickingMediaWithInfo:)]) {
+        [delegate performSelector:@selector(elcImagePickerController:didFinishPickingMediaWithInfo:) withObject:self withObject:[NSArray arrayWithArray:returnArray]];
+        
+          id<UIApplicationDelegate> appDelegate = [[UIApplication sharedApplication] delegate];
+
+        [[appDelegate.window viewWithTag:1001] removeFromSuperview];
+    }
+    
 }
 
 #pragma mark -
