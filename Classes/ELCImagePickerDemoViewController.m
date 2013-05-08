@@ -11,11 +11,15 @@
 #import "ELCImagePickerController.h"
 #import "ELCAlbumPickerController.h"
 #import "ELCAssetTablePicker.h"
+#import <MediaPlayer/MediaPlayer.h>
 
-@interface ELCImagePickerDemoViewController ()
+@interface ELCImagePickerDemoViewController (){
+
+}
 
 @property (nonatomic, retain) ALAssetsLibrary *specialLibrary;
-
+@property (nonatomic, retain) NSURL *videoURL;
+@property (nonatomic, retain) MPMoviePlayerController *moviePlayerController;
 @end
 
 @implementation ELCImagePickerDemoViewController
@@ -118,7 +122,15 @@
     NSMutableArray *images = [NSMutableArray arrayWithCapacity:[info count]];
 	
 	for(NSDictionary *dict in info) {
-	
+        NSString *type = [dict objectForKey:UIImagePickerControllerMediaType];
+
+        if ([type isEqualToString:ALAssetTypeVideo]) {
+            self.videoURL = [dict objectForKey:UIImagePickerControllerReferenceURL];
+            NSLog(@"video path:%@",self.videoURL);
+        }else{
+            NSLog(@"Image Url:%@",[dict objectForKey:UIImagePickerControllerReferenceURL]);
+        }
+                
         UIImage *image = [dict objectForKey:UIImagePickerControllerOriginalImage];
         [images addObject:image];
         
@@ -136,6 +148,54 @@
 	
 	[_scrollView setPagingEnabled:YES];
 	[_scrollView setContentSize:CGSizeMake(workingFrame.origin.x, workingFrame.size.height)];
+}
+
+-(void)playVideoForURL:(NSURL*)fileURL{
+    
+    self.moviePlayerController = [[MPMoviePlayerController alloc] initWithContentURL:fileURL];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(moviePlaybackComplete:)
+                                                 name:MPMoviePlayerPlaybackDidFinishNotification
+                                               object:self.moviePlayerController];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(movieStateChanged:)
+                                                 name:MPMoviePlayerLoadStateDidChangeNotification
+                                               object:self.moviePlayerController];
+
+    [self.moviePlayerController prepareToPlay];
+//    [moviePlayerController play];
+}
+
+-(void)movieStateChanged:(NSNotification*)notification{
+//    MPMoviePlayerController *moviePlayerController = [notification object];
+    [self.view addSubview:self.moviePlayerController.view];
+    self.moviePlayerController.fullscreen = YES;
+    
+//    if (self.moviePlayerController.loadState == MPMovieLoadStatePlayable) {
+//
+//    }else{
+//        NSLog(@"load state:%d",self.moviePlayerController.loadState);
+//    }
+
+}
+
+- (void)moviePlaybackComplete:(NSNotification *)notification
+{
+    NSError *error = [[notification userInfo] objectForKey:@"error"];
+    
+    if (error) {
+        NSLog(@"Error:%@ Info:%@",error, [error userInfo]);
+    }
+    
+//    MPMoviePlayerController *moviePlayerController = [notification object];
+    
+    [[NSNotificationCenter defaultCenter] removeObserver:self
+                                                    name:MPMoviePlayerPlaybackDidFinishNotification
+                                                  object:self.moviePlayerController];
+    [self.moviePlayerController.view removeFromSuperview];
+    [self.moviePlayerController release];
 }
 
 - (void)elcImagePickerControllerDidCancel:(ELCImagePickerController *)picker
@@ -161,6 +221,13 @@
 	// e.g. self.myOutlet = nil;
 }
 
+-(void)viewDidAppear:(BOOL)animated{
+
+}
+
+-(void)viewDidLoad{
+
+}
 
 - (void)dealloc
 {
