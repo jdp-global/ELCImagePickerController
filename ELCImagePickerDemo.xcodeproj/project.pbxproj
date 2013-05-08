@@ -26,6 +26,8 @@
 		83C6BC9714476B280064D71D /* elc-ios-icon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 83C6BC9514476B280064D71D /* elc-ios-icon@2x.png */; };
 		83C6BC9814476B280064D71D /* elc-ios-icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 83C6BC9614476B280064D71D /* elc-ios-icon.png */; };
 		E29A5E3C1239C42A008BB149 /* AssetsLibrary.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E29A5E3B1239C42A008BB149 /* AssetsLibrary.framework */; };
+		E6622FA6173ABC32001A6A50 /* MediaPlayer.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E6622FA5173ABC32001A6A50 /* MediaPlayer.framework */; };
+		E6622FA8173AC822001A6A50 /* TestMovie.MOV in Resources */ = {isa = PBXBuildFile; fileRef = E6622FA7173AC822001A6A50 /* TestMovie.MOV */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -59,6 +61,8 @@
 		83C6BC9614476B280064D71D /* elc-ios-icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "elc-ios-icon.png"; sourceTree = "<group>"; };
 		8D1107310486CEB800E47090 /* ELCImagePickerDemo-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "ELCImagePickerDemo-Info.plist"; plistStructureDefinitionIdentifier = "com.apple.xcode.plist.structure-definition.iphone.info-plist"; sourceTree = "<group>"; };
 		E29A5E3B1239C42A008BB149 /* AssetsLibrary.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AssetsLibrary.framework; path = System/Library/Frameworks/AssetsLibrary.framework; sourceTree = SDKROOT; };
+		E6622FA5173ABC32001A6A50 /* MediaPlayer.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MediaPlayer.framework; path = System/Library/Frameworks/MediaPlayer.framework; sourceTree = SDKROOT; };
+		E6622FA7173AC822001A6A50 /* TestMovie.MOV */ = {isa = PBXFileReference; lastKnownFileType = video.quicktime; path = TestMovie.MOV; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -66,6 +70,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E6622FA6173ABC32001A6A50 /* MediaPlayer.framework in Frameworks */,
 				1D60589F0D05DD5A006BFB54 /* Foundation.framework in Frameworks */,
 				1DF5F4E00D08C38300B7A737 /* UIKit.framework in Frameworks */,
 				288765A50DF7441C002DB57D /* CoreGraphics.framework in Frameworks */,
@@ -108,6 +113,7 @@
 		29B97314FDCFA39411CA2CEA /* CustomTemplate */ = {
 			isa = PBXGroup;
 			children = (
+				E6622FA5173ABC32001A6A50 /* MediaPlayer.framework */,
 				080E96DDFE201D6D7F000001 /* Classes */,
 				29B97315FDCFA39411CA2CEA /* Other Sources */,
 				29B97317FDCFA39411CA2CEA /* Resources */,
@@ -130,6 +136,7 @@
 		29B97317FDCFA39411CA2CEA /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				E6622FA7173AC822001A6A50 /* TestMovie.MOV */,
 				1A4C631217380272001E0978 /* Overlay.png */,
 				1A4C631317380272001E0978 /* Overlay@2x.png */,
 				83C6BC9514476B280064D71D /* elc-ios-icon@2x.png */,
@@ -228,6 +235,7 @@
 				230644BC15F8C0BB007679C7 /* MainWindow-iPad.xib in Resources */,
 				1A4C631417380272001E0978 /* Overlay.png in Resources */,
 				1A4C631517380272001E0978 /* Overlay@2x.png in Resources */,
+				E6622FA8173AC822001A6A50 /* TestMovie.MOV in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
