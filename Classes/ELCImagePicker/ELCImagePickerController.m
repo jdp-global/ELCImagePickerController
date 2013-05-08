@@ -27,10 +27,13 @@
 {
 	NSMutableArray *returnArray = [[[NSMutableArray alloc] init] autorelease];
 	
+    
 	for(ALAsset *asset in assets) {
-
+        
+        NSString *assetType = [asset valueForProperty:ALAssetPropertyType];
+        
 		NSMutableDictionary *workingDictionary = [[NSMutableDictionary alloc] init];
-		[workingDictionary setObject:[asset valueForProperty:ALAssetPropertyType] forKey:@"UIImagePickerControllerMediaType"];
+		[workingDictionary setObject:assetType forKey:@"UIImagePickerControllerMediaType"];
         ALAssetRepresentation *assetRep = [asset defaultRepresentation];
         
         CGImageRef imgRef = [assetRep fullScreenImage];
@@ -38,7 +41,14 @@
                                            scale:[UIScreen mainScreen].scale
                                      orientation:UIImageOrientationUp];
         [workingDictionary setObject:img forKey:@"UIImagePickerControllerOriginalImage"];
-		[workingDictionary setObject:[[asset valueForProperty:ALAssetPropertyURLs] valueForKey:[[[asset valueForProperty:ALAssetPropertyURLs] allKeys] objectAtIndex:0]] forKey:@"UIImagePickerControllerReferenceURL"];
+		
+        NSURL *refUrl = [[asset valueForProperty:ALAssetPropertyURLs] valueForKey:[[[asset valueForProperty:ALAssetPropertyURLs] allKeys] objectAtIndex:0]];
+        
+        if ([assetType isEqualToString:ALAssetTypeVideo]) {
+            refUrl = [self videoAssetURLToTempFile:refUrl];
+        }
+        
+        [workingDictionary setObject:refUrl forKey:@"UIImagePickerControllerReferenceURL"];
 		
 		[returnArray addObject:workingDictionary];
 		
