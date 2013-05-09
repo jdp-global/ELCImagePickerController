@@ -37,15 +37,15 @@ processedAssets = _processedAssets;
 	}
 }
 
-#pragma mark - Accept asset dicionaries 
+#pragma mark - Accept asset dictionaries
 
 //called from album picker. assets holds dictionaries for all assets picked from the photo album
 - (void)selectedAssets:(NSArray *)assets
 {
 	
     //pull out video files and process separately
-    //queue compoleted video assets in array
-    //once all are completed process the assets
+    //queue completed assets in array
+    //once all are processed, send the dictionary array to the delegate
 	for(ALAsset *asset in assets) {
         
         NSString *assetType = [asset valueForProperty:ALAssetPropertyType];
@@ -76,8 +76,11 @@ processedAssets = _processedAssets;
 }
 
 #pragma mark - handle processing events
-//returns processed assets to the delegate when everything is done processing
--(void)returnDelegate{
+//checks if all assets have been processed and notifies delegate if everything is done
+-(void)assetProcessed{
+    if (self.processCount > 0)
+        return;
+    
     if(_myDelegate != nil && [_myDelegate respondsToSelector:@selector(elcImagePickerController:didFinishPickingMediaWithInfo:)]) {
 		[_myDelegate performSelector:@selector(elcImagePickerController:didFinishPickingMediaWithInfo:) withObject:self withObject:[NSArray arrayWithArray:self.processedAssets]];
 	} else {
@@ -88,7 +91,9 @@ processedAssets = _processedAssets;
 //starts processing on queues once the assets have been sorted
 -(void)startProcessing{
     for (ALAsset *asset in self.imageQueue) {
-        [self processAsset:asset];
+        NSURL *url = [[asset valueForProperty:ALAssetPropertyURLs] valueForKey:[[[asset valueForProperty:ALAssetPropertyURLs] allKeys] objectAtIndex:0]];
+        url = [NSURL fileURLWithPath:[self tmpPathForAssetURL:url]];
+        [self processAsset:asset withURL:url];
     }
     
     for (ALAsset *asset in self.videoQueue) {
@@ -96,15 +101,10 @@ processedAssets = _processedAssets;
     }
 }
 
-//checks if all assets have been processed and notifies delegate if everything is done
--(void)assetProcessed{
-    if (0 == self.processCount) {
-        [self returnDelegate];
-    }
-}
+
 
 //pulls out relevant info from the asset object
--(void)processAsset:(ALAsset*)asset{
+-(void)processAsset:(ALAsset*)asset withURL:(NSURL*)fileURL{
     
     //initialize asset dictionary
     NSMutableDictionary *workingDictionary = [[NSMutableDictionary alloc] init];
@@ -122,8 +122,8 @@ processedAssets = _processedAssets;
     [workingDictionary setObject:img forKey:@"UIImagePickerControllerOriginalImage"];
     
     //pull out reference URL: this property is a file url for videos; for images it's used as the file name since the full image is returned;
-    NSURL *refUrl = [[asset valueForProperty:ALAssetPropertyURLs] valueForKey:[[[asset valueForProperty:ALAssetPropertyURLs] allKeys] objectAtIndex:0]];
-    [workingDictionary setObject:refUrl forKey:@"UIImagePickerControllerReferenceURL"];
+//    NSURL *refUrl = [[asset valueForProperty:ALAssetPropertyURLs] valueForKey:[[[asset valueForProperty:ALAssetPropertyURLs] allKeys] objectAtIndex:0]];
+    [workingDictionary setObject:fileURL forKey:@"UIImagePickerControllerReferenceURL"];
     
 //    if ([assetType isEqualToString:ALAssetTypeVideo]) {
 //        [self.videoQueue removeObject:asset];
@@ -136,11 +136,21 @@ processedAssets = _processedAssets;
     [self assetProcessed];
 }
 
+#pragma mark - helper functions
+-(NSString *)tmpPathForAssetURL:(NSURL*) assetUrl{
+    NSString * surl = [assetUrl absoluteString];
+    NSString * ext = [surl substringFromIndex:[surl rangeOfString:@"ext="].location + 4];
+    NSTimeInterval ti = [[NSDate date]timeIntervalSinceReferenceDate];
+    NSString * filename = [NSString stringWithFormat: @"%f.%@",ti,ext];
+    NSString * tmpfile = [NSTemporaryDirectory() stringByAppendingPathComponent:filename];
+    return tmpfile;
+}
+
 #pragma mark - copy video data out of photo album
 //notified when the videoAssetToTempFile success block is run
--(void)finishedMovingVideoForAsset:(ALAsset*)asset{
+-(void)finishedMovingVideoForAsset:(ALAsset*)asset withURL:(NSURL*)fileURL{
     //    [self.videoQueue removeObject:asset];
-    [self processAsset:asset];
+    [self processAsset:asset withURL:fileURL];
 }
 
 //notified when the videoAssetToTempFile failure block is run
@@ -155,11 +165,12 @@ processedAssets = _processedAssets;
 -(void) videoAssetToTempFile:(ALAsset*)asset
 {    
     NSURL *url = [[asset valueForProperty:ALAssetPropertyURLs] valueForKey:[[[asset valueForProperty:ALAssetPropertyURLs] allKeys] objectAtIndex:0]];
-    NSString * surl = [url absoluteString];
-    NSString * ext = [surl substringFromIndex:[surl rangeOfString:@"ext="].location + 4];
-    NSTimeInterval ti = [[NSDate date]timeIntervalSinceReferenceDate];
-    NSString * filename = [NSString stringWithFormat: @"%f.%@",ti,ext];
-    NSString * tmpfile = [NSTemporaryDirectory() stringByAppendingPathComponent:filename];
+//    NSString * surl = [url absoluteString];
+//    NSString * ext = [surl substringFromIndex:[surl rangeOfString:@"ext="].location + 4];
+//    NSTimeInterval ti = [[NSDate date]timeIntervalSinceReferenceDate];
+//    NSString * filename = [NSString stringWithFormat: @"%f.%@",ti,ext];
+    NSString * tmpfile = [self tmpPathForAssetURL:url];
+    //[NSTemporaryDirectory() stringByAppendingPathComponent:filename];
 
     ALAssetsLibraryAssetForURLResultBlock resultblock = ^(ALAsset *myasset)
     {
@@ -192,7 +203,7 @@ processedAssets = _processedAssets;
             
         }
         fclose(f);
-        [self finishedMovingVideoForAsset:asset];
+        [self finishedMovingVideoForAsset:asset withURL:[NSURL fileURLWithPath:tmpfile]];
     };
     
     
@@ -213,6 +224,9 @@ processedAssets = _processedAssets;
 //    return [NSURL fileURLWithPath:tmpfile];
 }
 
+
+
+#pragma mark - rotation
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation
 {
     if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
