@@ -12,9 +12,23 @@
 #import "ELCAssetTablePicker.h"
 #import "ELCAlbumPickerController.h"
 
+@interface ELCImagePickerController (){
+    
+}
+
+@property (nonatomic, retain) NSMutableArray *imageQueue;
+@property (nonatomic, retain) NSMutableArray *videoQueue;
+@property (nonatomic, retain) NSMutableArray *processedAssets;
+@property (nonatomic, assign) NSInteger processCount;
+@end
 @implementation ELCImagePickerController
 
+#pragma mark - Properties 
 @synthesize delegate = _myDelegate;
+@synthesize
+imageQueue = _imageQueue,
+videoQueue = _videoQueue,
+processedAssets = _processedAssets;
 
 - (void)cancelImagePicker
 {
@@ -23,47 +37,124 @@
 	}
 }
 
+#pragma mark - Accept asset dicionaries 
+
+//called from album picker. assets holds dictionaries for all assets picked from the photo album
 - (void)selectedAssets:(NSArray *)assets
 {
-	NSMutableArray *returnArray = [[[NSMutableArray alloc] init] autorelease];
 	
-    
+    //pull out video files and process separately
+    //queue compoleted video assets in array
+    //once all are completed process the assets
 	for(ALAsset *asset in assets) {
         
         NSString *assetType = [asset valueForProperty:ALAssetPropertyType];
+
         
-		NSMutableDictionary *workingDictionary = [[NSMutableDictionary alloc] init];
-		[workingDictionary setObject:assetType forKey:@"UIImagePickerControllerMediaType"];
-        ALAssetRepresentation *assetRep = [asset defaultRepresentation];
-        
-        CGImageRef imgRef = [assetRep fullScreenImage];
-        UIImage *img = [UIImage imageWithCGImage:imgRef
-                                           scale:[UIScreen mainScreen].scale
-                                     orientation:UIImageOrientationUp];
-        [workingDictionary setObject:img forKey:@"UIImagePickerControllerOriginalImage"];
-		
-        NSURL *refUrl = [[asset valueForProperty:ALAssetPropertyURLs] valueForKey:[[[asset valueForProperty:ALAssetPropertyURLs] allKeys] objectAtIndex:0]];
-        
+        //move video to tmp file
         if ([assetType isEqualToString:ALAssetTypeVideo]) {
-            refUrl = [self videoAssetURLToTempFile:refUrl];
+            if (!self.videoQueue) {
+                self.videoQueue = [NSMutableArray array];
+            }
+            
+            [self.videoQueue addObject:asset];
+        }else{
+            if (!self.imageQueue) {
+                self.imageQueue = [NSMutableArray array];
+            }
+            
+            [self.imageQueue addObject:asset];
         }
-        
-        [workingDictionary setObject:refUrl forKey:@"UIImagePickerControllerReferenceURL"];
-		
-		[returnArray addObject:workingDictionary];
-		
-		[workingDictionary release];	
-	}    
-	if(_myDelegate != nil && [_myDelegate respondsToSelector:@selector(elcImagePickerController:didFinishPickingMediaWithInfo:)]) {
-		[_myDelegate performSelector:@selector(elcImagePickerController:didFinishPickingMediaWithInfo:) withObject:self withObject:[NSArray arrayWithArray:returnArray]];
+    }
+    self.processCount =  self.imageQueue.count + self.videoQueue.count;
+    self.processedAssets = [NSMutableArray arrayWithCapacity:self.processCount];
+    [self startProcessing];
+    
+//    NSURL *refUrl = [[asset valueForProperty:ALAssetPropertyURLs] valueForKey:[[[asset valueForProperty:ALAssetPropertyURLs] allKeys] objectAtIndex:0]];
+//    refUrl = [self videoAssetURLToTempFile:refUrl];
+    
+}
+
+#pragma mark - handle processing events
+//returns processed assets to the delegate when everything is done processing
+-(void)returnDelegate{
+    if(_myDelegate != nil && [_myDelegate respondsToSelector:@selector(elcImagePickerController:didFinishPickingMediaWithInfo:)]) {
+		[_myDelegate performSelector:@selector(elcImagePickerController:didFinishPickingMediaWithInfo:) withObject:self withObject:[NSArray arrayWithArray:self.processedAssets]];
 	} else {
         [self popToRootViewControllerAnimated:NO];
     }
 }
 
--(NSURL*) videoAssetURLToTempFile:(NSURL*)url
-{
+//starts processing on queues once the assets have been sorted
+-(void)startProcessing{
+    for (ALAsset *asset in self.imageQueue) {
+        [self processAsset:asset];
+    }
     
+    for (ALAsset *asset in self.videoQueue) {
+        [self videoAssetToTempFile:asset];
+    }
+}
+
+//checks if all assets have been processed and notifies delegate if everything is done
+-(void)assetProcessed{
+    if (0 == self.processCount) {
+        [self returnDelegate];
+    }
+}
+
+//pulls out relevant info from the asset object
+-(void)processAsset:(ALAsset*)asset{
+    
+    //initialize asset dictionary
+    NSMutableDictionary *workingDictionary = [[NSMutableDictionary alloc] init];
+
+    //pull out type
+    NSString *assetType = [asset valueForProperty:ALAssetPropertyType];
+    [workingDictionary setObject:assetType forKey:@"UIImagePickerControllerMediaType"];
+
+    //pull out image
+    ALAssetRepresentation *assetRep = [asset defaultRepresentation];
+    CGImageRef imgRef = [assetRep fullScreenImage];
+    UIImage *img = [UIImage imageWithCGImage:imgRef
+                                       scale:[UIScreen mainScreen].scale
+                                 orientation:UIImageOrientationUp];
+    [workingDictionary setObject:img forKey:@"UIImagePickerControllerOriginalImage"];
+    
+    //pull out reference URL: this property is a file url for videos; for images it's used as the file name since the full image is returned;
+    NSURL *refUrl = [[asset valueForProperty:ALAssetPropertyURLs] valueForKey:[[[asset valueForProperty:ALAssetPropertyURLs] allKeys] objectAtIndex:0]];
+    [workingDictionary setObject:refUrl forKey:@"UIImagePickerControllerReferenceURL"];
+    
+//    if ([assetType isEqualToString:ALAssetTypeVideo]) {
+//        [self.videoQueue removeObject:asset];
+//    }else{
+//        [self.imageQueue removeObject:asset];
+//    }
+    self.processCount--;
+    [self.processedAssets addObject:workingDictionary];
+    [workingDictionary release];
+    [self assetProcessed];
+}
+
+#pragma mark - copy video data out of photo album
+//notified when the videoAssetToTempFile success block is run
+-(void)finishedMovingVideoForAsset:(ALAsset*)asset{
+    //    [self.videoQueue removeObject:asset];
+    [self processAsset:asset];
+}
+
+//notified when the videoAssetToTempFile failure block is run
+-(void)failedMovingVideoForAsset:(ALAsset*)asset{
+    NSLog(@"<ELCImagePickerController> Failed to move video file to tmp; removing from queue ");
+//    [self.videoQueue removeObject:asset];
+    self.processCount--;
+    [self assetProcessed];
+}
+
+//caches the video file data to the tmp directory then calls the next step when processed
+-(void) videoAssetToTempFile:(ALAsset*)asset
+{    
+    NSURL *url = [[asset valueForProperty:ALAssetPropertyURLs] valueForKey:[[[asset valueForProperty:ALAssetPropertyURLs] allKeys] objectAtIndex:0]];
     NSString * surl = [url absoluteString];
     NSString * ext = [surl substringFromIndex:[surl rangeOfString:@"ext="].location + 4];
     NSTimeInterval ti = [[NSDate date]timeIntervalSinceReferenceDate];
@@ -100,14 +191,15 @@
             
             
         }
-        fclose(f);                
+        fclose(f);
+        [self finishedMovingVideoForAsset:asset];
     };
     
     
     ALAssetsLibraryAccessFailureBlock failureblock  = ^(NSError *myerror)
     {
         NSLog(@"Can not get asset - %@",[myerror localizedDescription]);
-        
+        [self failedMovingVideoForAsset:asset];
     };
     
     if(url)
@@ -118,7 +210,7 @@
                       failureBlock:failureblock];
     }
     
-    return [NSURL fileURLWithPath:tmpfile];
+//    return [NSURL fileURLWithPath:tmpfile];
 }
 
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation
@@ -148,6 +240,16 @@
 - (void)dealloc
 {
     NSLog(@"deallocing ELCImagePickerController");
+    [_videoQueue release];
+    [_processedAssets release];
+    [_imageQueue release];
+    [_myDelegate release];
+    
+    _videoQueue = nil;
+    _processedAssets = nil;
+    _imageQueue = nil;
+    _myDelegate = nil;
+    
     [super dealloc];
 }
 
