@@ -257,7 +257,7 @@ processedAssets = _processedAssets;
     [_videoQueue release];
     [_processedAssets release];
     [_imageQueue release];
-    [_myDelegate release];
+//    [_myDelegate release];
     
     _videoQueue = nil;
     _processedAssets = nil;
