@@ -10,7 +10,7 @@ Pod::Spec.new do |s|
     s.author = {'ELC Technologies' => 'http://elctech.com'}
     s.source = { 
       :git => 'https://github.com/elc/ELCImagePickerController.git', 
-      :commit => 'HEAD' 
+      :commit => 'e065fd3c6489bf1b98191ebd352cee7c4ff99323' 
     }
     s.platform = :ios, '5.0'
     s.resources = 'Classes/**/*.{xib,png}'
